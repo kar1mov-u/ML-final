@@ -1,0 +1,19 @@
+# systemd service: starts the app on boot and restarts it after a crash.
+# Install:  sudo cp deploy/jobtracker.service /etc/systemd/system/
+#           sudo systemctl daemon-reload && sudo systemctl enable --now jobtracker
+# Logs:     journalctl -u jobtracker -f
+[Unit]
+Description=IT job level and salary estimator
+After=network.target
+
+[Service]
+User=jobtracker
+WorkingDirectory=/srv/jobtracker
+# secrets (GEMINI_API_KEY) and settings come from .env, which is never in git
+EnvironmentFile=/srv/jobtracker/.env
+ExecStart=/srv/jobtracker/.venv/bin/gunicorn --workers 2 --bind 127.0.0.1:8000 app:app
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,6 @@
+# Caddy: HTTPS with an automatic Let's Encrypt certificate, forwarding to the app.
+# Replace the domain (a free one works, e.g. from duckdns.org), then:
+#   sudo cp deploy/Caddyfile /etc/caddy/Caddyfile && sudo systemctl reload caddy
+jobs.example.duckdns.org {
+    reverse_proxy 127.0.0.1:8000
+}

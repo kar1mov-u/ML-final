@@ -1,0 +1,6 @@
+# Install with: crontab -u jobtracker deploy/crontab.txt
+# Weekly job every Monday 06:00: collect new posts (Telegram + hh.uz) -> Gemini labels ->
+# retrain + promotion gate (only after the v1 release). Output: data/weekly.log
+0 6 * * 1  cd /srv/jobtracker && .venv/bin/python -m scripts.weekly >> data/weekly.log 2>&1
+# Nightly database backup (keeps the last 7 days)
+30 3 * * *  cd /srv/jobtracker && sqlite3 data/jobs.db ".backup data/backup-$(date +\%a).db"

@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IT Job Level & Salary Estimator</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 720px; margin: 0 auto; padding: 16px; color: #1f2328; background: #fff; }
+    h1 { font-size: 1.5rem; margin-bottom: 4px; }
+    .sub { color: #57606a; margin-top: 0; }
+    textarea { width: 100%; box-sizing: border-box; min-height: 220px; padding: 10px; font: inherit; border: 1px solid #d0d7de; border-radius: 8px; }
+    button { margin-top: 10px; padding: 10px 20px; font: inherit; border: 0; border-radius: 8px; background: #1f6feb; color: #fff; cursor: pointer; }
+    .card { margin-top: 18px; padding: 14px 16px; border-radius: 8px; background: #f6f8fa; }
+    .error { background: #ffebe9; color: #82071e; }
+    .warning { background: #fff8c5; padding: 8px 12px; border-radius: 6px; margin-bottom: 10px; }
+    .big { font-size: 1.4rem; font-weight: 600; }
+    .feedback { margin-top: 14px; padding-top: 12px; border-top: 1px solid #d0d7de; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .feedback div { width: 100%; }
+    .feedback select, .feedback input { padding: 8px; font: inherit; border: 1px solid #d0d7de; border-radius: 6px; }
+    .feedback button { margin-top: 0; }
+    .note { margin-top: 24px; font-size: .85rem; color: #57606a; }
+  </style>
+</head>
+<body>
+  <h1>IT Job Level &amp; Salary Estimator</h1>
+  <p class="sub">Paste an IT job vacancy from Uzbekistan (Uzbek, Russian or English).
+    · <a href="/dashboard">Weekly market dashboard</a></p>
+
+  <form method="post">
+    <textarea name="text" placeholder="e.g. We are looking for a Python developer with 2+ years of experience, Django, PostgreSQL, office in Tashkent...">{{ text }}</textarea>
+    <button type="submit">Estimate</button>
+  </form>
+
+  {% if message %}<div class="card">{{ message }}</div>{% endif %}
+
+  {% if result %}
+    {% if result.error %}
+      <div class="card error">{{ result.error }}</div>
+    {% else %}
+      <div class="card">
+        {% if result.warning %}<div class="warning">{{ result.warning }}</div>{% endif %}
+        <div>Level</div>
+        <div class="big">{{ result.level }}{% if result.confidence %} <small>({{ (result.confidence * 100) | round | int }}% sure)</small>{% endif %}</div>
+        <div style="margin-top:10px">Salary estimate (USD per month)</div>
+        <div class="big">${{ result.salary_low | int }} – ${{ result.salary_high | int }}</div>
+        <div>most likely about ${{ result.salary_usd | int }}</div>
+
+        <form method="post" action="/feedback" class="feedback">
+          <div><b>Know the real answer?</b> Help us improve (optional):</div>
+          <input type="hidden" name="id" value="{{ result.id }}">
+          <select name="level">
+            <option value="">real level…</option>
+            <option>junior</option><option>middle</option><option>senior</option>
+          </select>
+          <input name="salary_usd" type="number" min="100" max="20000" placeholder="real salary, USD/month">
+          <button type="submit">Send</button>
+        </form>
+      </div>
+    {% endif %}
+  {% endif %}
+
+  <p class="note">
+    Model version: <b>{{ version }}</b>. Estimates come from past posts in public Telegram job
+    channels; posted salaries are not the whole market.<br>
+    <b>What we log:</b> the time, your text with phone numbers, e-mails, links and names removed,
+    and the prediction, so we can measure and improve the model. If you send a correction, it is
+    stored with that prediction and used as a label for the next model. Nothing else is stored.
+  </p>
+</body>
+</html>

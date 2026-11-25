@@ -1,0 +1,56 @@
+{
+  "version": "v0",
+  "created": "2026-11-19T17:24:51+05:00",
+  "level_model": "smart_keyword_rule",
+  "salary_model": "smart_keyword_median",
+  "data": {
+    "vacancies": 3677,
+    "train": 3401,
+    "test": 276,
+    "train_level_rows": 2590,
+    "train_salary_rows": 3157,
+    "first_post": "2019-02-18",
+    "test_start": "2026-09-01",
+    "extraction_prompt": "v2"
+  },
+  "cv": {
+    "level": {
+      "dummy_most_frequent": {
+        "macro_f1": 0.2364
+      },
+      "smart_keyword_rule": {
+        "macro_f1": 0.7493
+      },
+      "naive_bayes": {
+        "macro_f1": 0.3491
+      },
+      "logistic_regression": {
+        "macro_f1": 0.556
+      }
+    },
+    "salary": {
+      "dummy_median": {
+        "mae": 712.232,
+        "over30": 0.3327
+      },
+      "smart_keyword_median": {
+        "mae": 699.1972,
+        "over30": 0.3251
+      },
+      "linear_ridge": {
+        "mae": 572.7379,
+        "over30": 0.3951
+      },
+      "knn": {
+        "mae": 617.7534,
+        "over30": 0.384
+      },
+      "decision_tree": {
+        "mae": 666.3873,
+        "over30": 0.3806
+      }
+    }
+  },
+  "salary_cv_mae": 699.1972,
+  "test": null
+}

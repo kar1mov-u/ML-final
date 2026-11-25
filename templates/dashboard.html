@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IT Job Market Dashboard</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 720px; margin: 0 auto; padding: 16px; color: #1f2328; background: #fff; }
+    h1 { font-size: 1.5rem; margin-bottom: 4px; }
+    h2 { font-size: 1.1rem; margin-top: 28px; }
+    .sub { color: #57606a; margin-top: 0; }
+    table { border-collapse: collapse; width: 100%; }
+    td, th { padding: 4px 6px; text-align: left; border-bottom: 1px solid #eaeef2; }
+    .bar { background: #1f6feb; height: 12px; border-radius: 3px; }
+    a { color: #1f6feb; }
+  </style>
+</head>
+<body>
+  <p><a href="/">← Estimate a vacancy</a></p>
+  <h1>IT job market in Uzbekistan</h1>
+  <p class="sub">{{ s.posts }} unique IT vacancies since {{ s.since }} (last 12 weeks), from public Telegram job channels.</p>
+
+  <h2>Postings per week</h2>
+  {% set top = s.per_week | map(attribute=1) | max if s.per_week else 1 %}
+  <table>
+    {% for week, n in s.per_week %}
+      <tr><td style="width:80px">{{ week }}</td><td style="width:40px">{{ n }}</td>
+          <td><div class="bar" style="width: {{ (100 * n / top) | int }}%"></div></td></tr>
+    {% endfor %}
+  </table>
+
+  <h2>Most requested skills</h2>
+  {% set top = s.top_skills[0][1] if s.top_skills else 1 %}
+  <table>
+    {% for skill, n in s.top_skills %}
+      <tr><td style="width:160px">{{ skill }}</td><td style="width:40px">{{ n }}</td>
+          <td><div class="bar" style="width: {{ (100 * n / top) | int }}%"></div></td></tr>
+    {% endfor %}
+  </table>
+
+  <h2>Median posted salary by level (USD per month)</h2>
+  <table>
+    <tr><th>Level</th><th>Posts with salary</th><th>Median</th></tr>
+    {% for level, n, median in s.salary_by_level %}
+      <tr><td>{{ level }}</td><td>{{ n }}</td><td>${{ median }}</td></tr>
+    {% endfor %}
+  </table>
+  <p class="sub" style="margin-top:16px">Posted salaries are not paid salaries, and many posts hide the salary.</p>
+</body>
+</html>

@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Model Monitoring</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 720px; margin: 0 auto; padding: 16px; color: #1f2328; background: #fff; }
+    h1 { font-size: 1.5rem; margin-bottom: 4px; }
+    h2 { font-size: 1.1rem; margin-top: 28px; }
+    .sub { color: #57606a; margin-top: 0; }
+    table { border-collapse: collapse; width: 100%; }
+    td, th { padding: 4px 6px; text-align: left; border-bottom: 1px solid #eaeef2; }
+    a { color: #1f6feb; }
+  </style>
+</head>
+<body>
+  <p><a href="/">← Estimator</a> · <a href="/dashboard">Dashboard</a></p>
+  <h1>Monitoring</h1>
+  <p class="sub">Live model <b>{{ meta.version }}</b> (level: {{ meta.level_model }}, salary: {{ meta.salary_model }}),
+    created {{ meta.created[:10] }}.</p>
+
+  <h2>Live vs offline</h2>
+  <p class="sub">Live = the model's error on each new week of collected posts (published after the model was created).
+    Offline = cross-validation on the training data.</p>
+  <table>
+    <tr><th>Week</th><th>Posts</th><th>Level macro F1</th><th>Salary MAE (USD)</th></tr>
+    <tr><td><i>offline (CV)</i></td><td></td><td>{{ offline.level_f1 }}</td><td>{{ offline.salary_mae | round | int }}</td></tr>
+    {% if live is none %}
+      <tr><td colspan="4">Starts after the v1 release (until then, new weeks belong to the frozen test set).</td></tr>
+    {% else %}
+    {% for row in live %}
+      <tr><td>{{ row.week }}</td><td>{{ row.posts }}</td><td>{{ row.level_f1 if row.level_f1 is not none else "–" }}</td>
+          <td>{{ row.salary_mae if row.salary_mae is not none else "–" }}</td></tr>
+    {% else %}
+      <tr><td colspan="4">No new weeks yet: they appear after the weekly job collects posts newer than the model.</td></tr>
+    {% endfor %}
+    {% endif %}
+  </table>
+
+  <h2>Usage</h2>
+  <p>{{ usage.total }} predictions in total; {{ usage.labelled }} with a user correction (label).</p>
+  <table>
+    <tr><th>Day (Tashkent)</th><th>Predictions</th></tr>
+    {% for day, n in usage.per_day %}<tr><td>{{ day }}</td><td>{{ n }}</td></tr>{% endfor %}
+  </table>
+
+  <h2>Inputs unlike the training data</h2>
+  <table>
+    {% for what, n in usage.odd.items() %}<tr><td>{{ what }}</td><td>{{ n }}</td></tr>{% endfor %}
+  </table>
+</body>
+</html>

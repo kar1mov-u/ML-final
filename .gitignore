@@ -1,0 +1,16 @@
+# secrets
+.env
+*.session
+*.session-journal
+# environment
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+# data (rebuilt by scripts; the DB lives on the server disk). Model files ARE committed:
+# a frozen v1 tag and rollback to an older model need them in git.
+data/*.db
+data/*.db-journal
+data/raw/
+.DS_Store
+data/*.log

@@ -1,0 +1,18 @@
+# data collection
+requests>=2.32
+beautifulsoup4>=4.12
+# ML (course tools)
+pandas>=2.2
+scikit-learn>=1.5
+joblib>=1.4
+# LLM extraction (data cleaning only, never used at serving time)
+google-genai>=3.4
+pydantic>=2.8
+# web app
+flask>=3.1
+gunicorn>=23
+# config, tests, notebook
+python-dotenv>=1.0
+pytest>=8.0
+matplotlib>=3.9
+jupyter

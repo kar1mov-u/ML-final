@@ -2,7 +2,7 @@
 Estimates the level (junior / middle / senior) and monthly salary of an IT job posting in Uzbekistan,
 and shows a weekly view of the skills employers ask for. Built for students and the career centre.
 
-Live link: _TBD_
+Live link: https://web-production-64885b5b.up.railway.app  (also `/dashboard`, `/monitor`)
 
 ## Result
 Cross-validation on the training part (5 time-ordered folds; test set untouched until v1):
@@ -56,53 +56,53 @@ Docs: `docs/experiment_log.md`, `docs/error_analysis_*.md`, `docs/decision_note.
 `docs/architecture.pdf`.
 
 ## How to deploy
-**Where it runs:** a Google Cloud **e2-micro** VM (always-free tier: 1 GB RAM, 30 GB standard disk,
-region us-central1), Ubuntu 24.04. `gunicorn` serves the app, `systemd` keeps it running, `Caddy`
-gives HTTPS on a free `<ip>.sslip.io` address, `cron` runs the weekly job. Files: `deploy/`.
+**Where it runs:** [Railway](https://railway.com), project `it-job-estimator`, service `web`.
+Railway builds the `Dockerfile`, runs `gunicorn` (1 worker, 4 threads) and gives HTTPS on
+`*.up.railway.app`. A **volume** is mounted at `/app/data`: it holds the database (`jobs.db`) and the
+models (`models/`), so both survive restarts and redeploys. Secrets are Railway variables, never in git.
 
-**First setup (once)**
-1. Google Cloud console → Compute Engine → **Create instance**: machine type `e2-micro`, region
-   `us-central1` (or us-west1 / us-east1, the free ones), boot disk **Ubuntu 24.04, Standard
-   persistent disk, 30 GB**, firewall: tick **Allow HTTP** and **Allow HTTPS**.
-2. VPC network → IP addresses → make the VM's external IP **static** (the link never changes).
-3. Click **SSH** next to the VM, then:
-   ```bash
-   curl -fsSL https://raw.githubusercontent.com/kar1mov-u/ML-final/main/deploy/setup_server.sh | sudo bash
-   sudo nano /srv/jobtracker/.env                 # GEMINI_API_KEY=...  (secrets never go to git)
-   ```
-4. Upload the database (it is not in git): in the SSH window, ⚙ → **Upload file** → `data/jobs.db`, then
-   ```bash
-   sudo mv ~/jobs.db /srv/jobtracker/data/ && sudo chown jobtracker:jobtracker /srv/jobtracker/data/jobs.db
-   sudo systemctl restart jobtracker && curl -s localhost:8000/health
-   ```
-5. Open the `https://…sslip.io` address the script printed, from a phone.
+| Variable | Value | Why |
+|---|---|---|
+| `GEMINI_API_KEY` | (secret) | weekly label extraction |
+| `DB_PATH` | `/app/data/jobs.db` | database on the volume |
+| `MODELS_DIR` | `/app/data/models` | models on the volume (git models are copied in at start-up) |
+| `WEEKLY_JOB` | `on` | the app runs `scripts/weekly.py` every Monday 06:00 Tashkent time |
 
-**Release a new model version**
+**First setup (done once, 2026-11-26)**
 ```bash
-python train.py --version v1 --final     # on a laptop: saves models/model_v1.* and sets models/LIVE
-git add models && git commit -m "model v1" && git tag v1 && git push --tags
-# on the server:
-sudo bash /srv/jobtracker/deploy/update.sh       # git pull + packages + restart + health check
+railway login
+railway init --name it-job-estimator
+railway add --service web --variables "DB_PATH=/app/data/jobs.db" --variables "MODELS_DIR=/app/data/models" --variables "WEEKLY_JOB=on"
+railway service link web
+railway variables --set "GEMINI_API_KEY=..."
+railway volume add --mount-path /app/data
+railway up --detach                                   # build + deploy from this folder
+railway volume files --volume web-volume upload --overwrite jobs.db jobs.db   # the DB is not in git
+railway domain                                        # public HTTPS link
 ```
-Later versions go through the promotion gate: `python retrain.py` (writes `models/LIVE` only if the
-candidate wins; every decision is logged in `docs/promotion_log.md`).
 
-**Weekly automation (cron, `deploy/crontab.txt`):** every Monday 06:00 `scripts/weekly.py` collects
-new posts (Telegram + hh.uz), labels them with Gemini and, after the v1 release, runs `retrain.py`.
-A candidate is promoted only if it beats the live model on the newest week; every decision goes to
-`docs/promotion_log.md`, and the app switches to a promoted model on the next request (no restart).
-Models promoted on the server are created there: copy them back and commit them
-(`scp server:/srv/jobtracker/models/model_v* models/ && git add models`) so they stay versioned.
+**Deploy a new version (code or model)**
+```bash
+python train.py --version v1 --final     # release only: saves models/model_v1.* and sets models/LIVE
+git add models && git commit -m "model v1" && git tag v1 && git push --tags
+railway up --detach                      # new image; v1 is copied onto the volume and served
+```
+After the release, the weekly job retrains inside the app; a candidate is promoted only if it beats
+the live model on the newest week (`retrain.py`, decisions in `docs/promotion_log.md`). A model
+promoted on the server lives on the volume; to keep it in git:
+`railway volume files --volume web-volume download models/model_v2.joblib models/` (same for `.json`).
 
-**Roll back to the previous model:** `echo v0 > models/LIVE` (the app picks it up on the next request; restarting also works)
-(all model files stay in git, so any version can be served again). `/health` shows the live version.
+**Roll back to the previous model:** set the variable `MODEL_VERSION=v0` in Railway (it overrides
+`models/LIVE`); the service redeploys and `/health` shows the version. Remove it to go back.
 
-**What happens on restart:** systemd starts the app again within 3 seconds after a crash and on
-every boot. The database is a file on the server disk (`data/jobs.db`), so predictions, labels and
-posts survive restarts and deploys; cron also keeps a daily backup copy.
+**What happens on restart:** Railway restarts the container after a crash or a redeploy. The
+database and models are on the volume, so posts, predictions and labels survive. Tested
+2026-11-26: logged a prediction, restarted the service, the prediction was still there.
 
-**Alternative:** `Dockerfile` (see the comment at its top); mount `./data` as a volume so the
-database survives new images.
+**Backup:** `railway volume files --volume web-volume download jobs.db backup-jobs.db`
+
+**Alternative:** any Linux server with `deploy/setup_server.sh` (systemd + Caddy + cron), or plain
+Docker (see the comment at the top of the `Dockerfile`).
 
 ## What we learned
 _TBD_

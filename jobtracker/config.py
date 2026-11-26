@@ -9,7 +9,11 @@ ROOT = Path(__file__).resolve().parent.parent
 load_dotenv(ROOT / ".env")
 
 DB_PATH = Path(os.getenv("DB_PATH", ROOT / "data" / "jobs.db"))
-MODELS_DIR = ROOT / "models"
+# Models shipped in git live in models/. On Railway the models live on the volume instead
+# (MODELS_DIR=/app/data/models), so a model promoted by the weekly retrain survives redeploys;
+# registry.sync_from_repo() copies the git models over at start-up.
+REPO_MODELS_DIR = ROOT / "models"
+MODELS_DIR = Path(os.getenv("MODELS_DIR", REPO_MODELS_DIR))
 
 # The handbook asks for Tashkent time in the prediction log.
 TASHKENT = ZoneInfo("Asia/Tashkent")

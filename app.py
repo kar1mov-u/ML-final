@@ -21,10 +21,13 @@ from jobtracker.dashboard import market_stats
 from jobtracker.db import connect
 from jobtracker.monitoring import live_metric, usage
 from jobtracker.predict import Predictor, check_feedback, check_input, log_prediction, save_feedback
-from jobtracker.registry import live_version, released
+from jobtracker import scheduler
+from jobtracker.registry import live_version, released, sync_from_repo
 
 app = Flask(__name__)
+sync_from_repo()                 # Railway: models live on the volume (no-op on a laptop)
 _predictor = Predictor()         # loaded at start-up
+scheduler.start()                # weekly job inside the app, only if WEEKLY_JOB=on (Railway)
 
 
 def get_predictor():

@@ -7,10 +7,11 @@
 Versions are never overwritten. Roll back: `echo v0 > models/LIVE` (the app picks it up).
 """
 import json
+import shutil
 
 import joblib
 
-from jobtracker.config import MODEL_VERSION, MODELS_DIR
+from jobtracker.config import MODEL_VERSION, MODELS_DIR, REPO_MODELS_DIR
 
 LIVE_FILE = MODELS_DIR / "LIVE"
 
@@ -69,3 +70,21 @@ def load(version):
     """(models dict, meta dict) of one version."""
     model_path, meta_path = _paths(version)
     return joblib.load(model_path), json.loads(meta_path.read_text())
+
+
+def sync_from_repo():
+    """When models live outside the repo (on the Railway volume): copy model files from git that
+    the volume does not have yet (e.g. a new v1 release), and serve the git LIVE version if it is
+    newer than the one on the volume. Files already on the volume are never overwritten."""
+    if MODELS_DIR.resolve() == REPO_MODELS_DIR.resolve():
+        return
+    MODELS_DIR.mkdir(parents=True, exist_ok=True)
+    for src in REPO_MODELS_DIR.glob("model_v*"):
+        if not (MODELS_DIR / src.name).exists():
+            shutil.copy2(src, MODELS_DIR / src.name)
+    repo_live = REPO_MODELS_DIR / "LIVE"
+    if repo_live.exists():
+        number = lambda v: int(v.strip().lstrip("v"))
+        repo_v = repo_live.read_text().strip()
+        if not LIVE_FILE.exists() or number(repo_v) > number(LIVE_FILE.read_text()):
+            set_live(repo_v)

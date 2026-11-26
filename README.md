@@ -56,29 +56,33 @@ Docs: `docs/experiment_log.md`, `docs/error_analysis_*.md`, `docs/decision_note.
 `docs/architecture.pdf`.
 
 ## How to deploy
-**Where it runs:** a small Linux VPS (Ubuntu). `gunicorn` serves the app, `systemd` keeps it running,
-`Caddy` gives HTTPS, `cron` runs the weekly job. Files: `deploy/`.
+**Where it runs:** a Google Cloud **e2-micro** VM (always-free tier: 1 GB RAM, 30 GB standard disk,
+region us-central1), Ubuntu 24.04. `gunicorn` serves the app, `systemd` keeps it running, `Caddy`
+gives HTTPS on a free `<ip>.sslip.io` address, `cron` runs the weekly job. Files: `deploy/`.
 
 **First setup (once)**
-```bash
-sudo adduser --system --group jobtracker
-sudo git clone <repo-url> /srv/jobtracker && cd /srv/jobtracker
-sudo python3 -m venv .venv && sudo .venv/bin/pip install -r requirements.txt
-sudo cp .env.example .env && sudo nano .env        # GEMINI_API_KEY (secrets never go to git)
-# copy the database from a laptop (it is not in git):  scp data/jobs.db server:/srv/jobtracker/data/
-sudo chown -R jobtracker:jobtracker /srv/jobtracker
-sudo cp deploy/jobtracker.service /etc/systemd/system/ && sudo systemctl daemon-reload
-sudo systemctl enable --now jobtracker             # start now and after every reboot
-sudo cp deploy/Caddyfile /etc/caddy/Caddyfile && sudo systemctl reload caddy   # HTTPS
-sudo crontab -u jobtracker deploy/crontab.txt      # weekly job + nightly DB backup
-```
+1. Google Cloud console → Compute Engine → **Create instance**: machine type `e2-micro`, region
+   `us-central1` (or us-west1 / us-east1, the free ones), boot disk **Ubuntu 24.04, Standard
+   persistent disk, 30 GB**, firewall: tick **Allow HTTP** and **Allow HTTPS**.
+2. VPC network → IP addresses → make the VM's external IP **static** (the link never changes).
+3. Click **SSH** next to the VM, then:
+   ```bash
+   curl -fsSL https://raw.githubusercontent.com/kar1mov-u/ML-final/main/deploy/setup_server.sh | sudo bash
+   sudo nano /srv/jobtracker/.env                 # GEMINI_API_KEY=...  (secrets never go to git)
+   ```
+4. Upload the database (it is not in git): in the SSH window, ⚙ → **Upload file** → `data/jobs.db`, then
+   ```bash
+   sudo mv ~/jobs.db /srv/jobtracker/data/ && sudo chown jobtracker:jobtracker /srv/jobtracker/data/jobs.db
+   sudo systemctl restart jobtracker && curl -s localhost:8000/health
+   ```
+5. Open the `https://…sslip.io` address the script printed, from a phone.
 
 **Release a new model version**
 ```bash
 python train.py --version v1 --final     # on a laptop: saves models/model_v1.* and sets models/LIVE
 git add models && git commit -m "model v1" && git tag v1 && git push --tags
 # on the server:
-cd /srv/jobtracker && sudo -u jobtracker git pull && sudo systemctl restart jobtracker
+sudo bash /srv/jobtracker/deploy/update.sh       # git pull + packages + restart + health check
 ```
 Later versions go through the promotion gate: `python retrain.py` (writes `models/LIVE` only if the
 candidate wins; every decision is logged in `docs/promotion_log.md`).

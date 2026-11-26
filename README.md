@@ -60,6 +60,8 @@ Docs: `docs/experiment_log.md`, `docs/error_analysis_*.md`, `docs/decision_note.
 Railway builds the `Dockerfile`, runs `gunicorn` (1 worker, 4 threads) and gives HTTPS on
 `*.up.railway.app`. A **volume** is mounted at `/app/data`: it holds the database (`jobs.db`) and the
 models (`models/`), so both survive restarts and redeploys. Secrets are Railway variables, never in git.
+Service settings: health check `/health` (a new deploy goes live only once it answers) and restart
+policy **Always** (the container is restarted after any crash).
 
 | Variable | Value | Why |
 |---|---|---|
